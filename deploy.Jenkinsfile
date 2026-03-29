@@ -172,25 +172,22 @@ Server  : ${DEPLOY_SERVER}
     }
 }
         // ✅ FIXED: Django health check
-        stage('❤️ Health Check') {
-            steps {
-                sh """
-                echo "=== Health Check ==="
-                for i in \$(seq 1 10); do
-                    if curl -s http://localhost:${APP_PORT} | grep -q '<html'; then
-                        echo "✅ Django is running"
-                        exit 0
-                    else
-                        echo "Waiting..."
-                        sleep 5
-                    fi
-                done
-                echo "❌ Health check failed"
-                exit 1
-                """
-            }
-        }
+     stage('Health Check') {
+    steps {
+        sh '''
+        echo "=== Health Check ==="
+        for i in $(seq 1 10); do
+            if curl -s http://localhost:8000/health/ | grep -q "UP"; then
+                echo "✅ App is healthy"
+                break
+            else
+                echo "Waiting..."
+                sleep 5
+            fi
+        done
+        '''
     }
+}
 
     post {
         always {
