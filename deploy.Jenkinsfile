@@ -120,61 +120,60 @@ Server  : ${DEPLOY_SERVER}
         }
 
         stage('🚀 Deploy to Production') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
-                    sshagent(['deployment-server-ssh']) {
-                        sh '''
-                        set -e
-                        echo "Starting deployment..."
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-credentials',
+            usernameVariable: 'DOCKER_USERNAME',
+            passwordVariable: 'DOCKER_PASSWORD'
+        )]) {
+            sshagent(['deployment-server-ssh']) {
+                sh '''
+                set -e
+                echo "Starting deployment..."
 
-                        ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
-                            set -e
-                            echo '✅ Connected to server'
+                ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
+                    set -e
+                    echo '✅ Connected to server'
 
-                            # Create Docker network if missing
-                            docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
+                    # Create Docker network if missing
+                    docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
 
-                            # Login to DockerHub on remote
-                            echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
+                    # Login to DockerHub on remote
+                    echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
 
-                            # Stop old containers using the same port
-                            docker ps -q --filter 'publish=$APP_PORT' | xargs -r docker stop
-                            docker ps -a -q --filter 'publish=$APP_PORT' | xargs -r docker rm
+                    # Stop old container by name if exists
+                    docker ps -q --filter 'name=$APP_NAME' | xargs -r docker stop
+                    docker ps -a -q --filter 'name=$APP_NAME' | xargs -r docker rm
 
-                            # Pull latest image
-                            docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                    # Pull latest image
+                    docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
 
-                            # Run new container
-                            docker run -d \
-                                --name $APP_NAME \
-                                --restart unless-stopped \
-                                --network private-net \
-                                --env-file $ENV_FILE \
-                                -p $APP_PORT:8000 \
-                                $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                    # Run new container
+                    docker run -d \
+                        --name $APP_NAME \
+                        --restart unless-stopped \
+                        --network private-net \
+                        --env-file $ENV_FILE \
+                        -p $APP_PORT:8000 \
+                        $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
 
-                            # Show last 20 logs
-                            sleep 5
-                            docker logs --tail 20 $APP_NAME
+                    # Show last 20 logs
+                    sleep 5
+                    docker logs --tail 20 $APP_NAME
 
-                            # Cleanup old images, keep last 5
-                            docker images --format '{{.Repository}} {{.ID}} {{.CreatedAt}}' \
-                                | grep $DOCKER_USERNAME/$APP_NAME \
-                                | sort -rk3 \
-                                | tail -n +6 \
-                                | awk '{print \$2}' \
-                                | xargs -r docker rmi || true
-                        "
-                        '''
-                    }
-                }
+                    # Cleanup old images, keep last 5
+                    docker images --format '{{.Repository}} {{.ID}} {{.CreatedAt}}' \
+                        | grep $DOCKER_USERNAME/$APP_NAME \
+                        | sort -rk3 \
+                        | tail -n +6 \
+                        | awk '{print \$2}' \
+                        | xargs -r docker rmi || true
+                "
+                '''
             }
         }
-
+    }
+}
         stage('💚 Health Check') {
             steps {
                 sh '''
