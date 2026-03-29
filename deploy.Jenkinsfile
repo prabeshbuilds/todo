@@ -180,7 +180,7 @@ Server  : ${DEPLOY_SERVER}
                 echo "=== Health Check ==="
                 success=0
                 for i in $(seq 1 10); do
-                    if curl -s http://127.0.0.1:$APP_PORT/health/ | grep -q "UP"; then
+                    if curl -s http://127.0.0.1:8000/ | grep -q "OK"; then
                         echo "✅ App is healthy"
                         success=1
                         break
