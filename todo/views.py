@@ -24,3 +24,8 @@ def delete(request, pk):
     todo = Todo.objects.get(id=pk)
     todo.delete()
     return redirect('index')
+
+from django.http import JsonResponse
+
+def health(request):
+    return JsonResponse({"status": "UP"})
