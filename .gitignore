@@ -5,7 +5,7 @@ __pycache__/
 *.pyd
 *.sqlite3
 *.env
-*.venv/
+venv/
 env/
 *.egg-info/
 *.egg
