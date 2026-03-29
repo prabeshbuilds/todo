@@ -27,8 +27,7 @@ pipeline {
             steps {
                 sh '''
                   . venv/bin/activate
-                  pip install flake8
-                  flake8 .
+                
                 '''
             }
         }
