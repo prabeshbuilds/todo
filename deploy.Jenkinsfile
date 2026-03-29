@@ -39,15 +39,32 @@ Server  : ${DEPLOY_SERVER}
         }
 
         // ✅ NEW: Setup Python
-        stage('🐍 Setup Python Environment') {
-            steps {
-                sh '''
-                python3 -m venv venv
-                venv/bin/python -m pip install --upgrade pip
-                venv/bin/python -m pip install -r requirements.txt
-                '''
-            }
-        }
+      stage('Setup Python Virtualenv') {
+    steps {
+        sh '''
+        set -e
+
+        # Remove old venv if exists
+        [ -d venv ] && rm -rf venv
+
+        # Create virtual environment
+        python3 -m venv venv
+
+        # Activate and upgrade pip safely
+        . venv/bin/activate
+        python -m pip install --upgrade pip setuptools wheel --break-system-packages
+
+        # Install dependencies from requirements.txt if exists
+        if [ -f requirements.txt ]; then
+            pip install -r requirements.txt --break-system-packages
+        fi
+
+        # Verify
+        python --version
+        pip --version
+        '''
+    }
+}
 
         // ✅ NEW: Run Django checks
         stage('🧪 Django Check & Migrate') {
