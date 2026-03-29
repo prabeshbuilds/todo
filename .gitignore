@@ -1,33 +1,52 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-
-# Environments
-.env
-/venv
-env/
+*.pyo
+*.pyd
+*.sqlite3
+*.env
 venv/
-ENV/
-env.bak/
-venv.bak/
+env/
+*.egg-info/
+*.egg
 
 # Django
 *.log
-local_settings.py
+*.pot
+*.pyc
 db.sqlite3
-db.sqlite3-journal
-
-# static
+media/
 staticfiles/
+local_settings.py
 
-# macOS
-.DS_Store
-
-# IDE
-.idea/
+# VS Code / IDEs
 .vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # Docker
-.dockerignore
+*.dockerignore
+docker-compose.override.yml
+*.swp
+*.bak
+
+# Pytest / Coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
+# Node / frontend (if used)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Secrets
+.env
