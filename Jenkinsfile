@@ -13,16 +13,12 @@ pipeline {
             }
         }
 
-  stage('Setup Python Virtualenv') {
+       stage('Setup Python Virtualenv') {
     steps {
         sh '''
             python3 -m venv venv
-
-            chmod +x venv/bin/pip
-            chmod +x venv/bin/python
-
-            venv/bin/pip install --upgrade pip
-            venv/bin/pip install -r requirements.txt
+            venv/bin/python -m pip install --upgrade pip
+            venv/bin/python -m pip install -r requirements.txt
         '''
     }
 }
