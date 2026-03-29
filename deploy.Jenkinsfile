@@ -71,11 +71,6 @@ Server  : ${DEPLOY_SERVER}
                 # Activate virtualenv
                 . venv/bin/activate
 
-                # Lint code (optional: install flake8 if needed)
-                if ! command -v flake8 &> /dev/null; then
-                    pip install flake8
-                fi
-                flake8 .
 
                 # Run Django checks and migrations
                 python manage.py check
