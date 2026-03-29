@@ -93,44 +93,67 @@ Server  : ${DEPLOY_SERVER}
         }
 
         stage('🚀 Deploy to Production') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )]) {
-                    sshagent(['deployment-server-ssh']) {
-                        sh '''
-                        ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
-                            set -e
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-credentials',
+            usernameVariable: 'DOCKER_USERNAME',
+            passwordVariable: 'DOCKER_PASSWORD'
+        )]) {
+            sshagent(['deployment-server-ssh']) {
+                sh '''
+                set -e
+                echo "🚀 Starting Deployment..."
 
-                            docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
+                ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
+                    set -e
+                    echo '✅ Connected to server'
 
-                            echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
+                    # Ensure Docker network exists
+                    docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
 
-                            docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                    # Login to DockerHub on remote
+                    echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
 
-                            docker stop $APP_NAME 2>/dev/null || true
-                            docker rm   $APP_NAME 2>/dev/null || true
+                    # Pull latest image
+                    docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
 
-                            docker run -d \
-                                --name $APP_NAME \
-                                --restart unless-stopped \
-                                --network private-net \
-                                --env-file $ENV_FILE \
-                                -p $APP_PORT:8000 \
-                                $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                    # Stop & remove any container using the app name
+                    docker stop $APP_NAME 2>/dev/null || true
+                    docker rm   $APP_NAME 2>/dev/null || true
 
-                            sleep 5
-                            docker ps | grep $APP_NAME
-                            docker logs --tail 20 $APP_NAME
-                        "
-                        '''
-                    }
-                }
+                    # Stop & remove any container using port 8000 (or APP_PORT)
+                    docker ps -q --filter "publish=$APP_PORT" | xargs -r docker stop
+                    docker ps -a -q --filter "publish=$APP_PORT" | xargs -r docker rm
+
+                    # Run new container
+                    docker run -d \
+                        --name $APP_NAME \
+                        --restart unless-stopped \
+                        --network private-net \
+                        --env-file $ENV_FILE \
+                        -p $APP_PORT:8000 \
+                        $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+
+                    # Verify container is running
+                    sleep 5
+                    docker ps | grep $APP_NAME
+
+                    # Show last 20 logs
+                    docker logs --tail 20 $APP_NAME
+
+                    # Cleanup old images (keep last 5)
+                    docker images --format '{{.Repository}} {{.ID}} {{.CreatedAt}}' \
+                        | grep $DOCKER_USERNAME/$APP_NAME \
+                        | sort -rk3 \
+                        | tail -n +6 \
+                        | awk '{print \$2}' \
+                        | xargs -r docker rmi || true
+                "
+                '''
             }
         }
-
+    }
+}
         // ✅ FIXED: Django health check
         stage('❤️ Health Check') {
             steps {
