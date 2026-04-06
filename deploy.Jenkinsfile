@@ -162,7 +162,7 @@ Server  : ${DEPLOY_SERVER}
 
                         success=0
                         for i in $(seq 1 3); do
-                            if curl -s --max-time 1 http://127.0.0.1:8000/health/ | grep -q '"UP"'; then
+                            if curl -s --max-time 1 http://127.0.0.1:8000/ | grep -q '"UP"'; then
                                 echo "✅ Django app is healthy"
                                 success=1
                                 break
