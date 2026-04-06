@@ -174,12 +174,13 @@ Server  : ${DEPLOY_SERVER}
         }
     }
 }
-      stage('💚 Health Check') {
+ stage('💚 Health Check') {
     steps {
         sh '''
         set -e
         echo "=== Health Check ==="
         success=0
+
         for i in $(seq 1 10); do
             STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
             if [ "$STATUS" = "UP" ]; then
@@ -198,8 +199,7 @@ Server  : ${DEPLOY_SERVER}
         fi
         '''
     }
-}
-    
+
     post {
         always {
             sh 'docker image prune -f'
