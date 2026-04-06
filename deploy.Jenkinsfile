@@ -155,37 +155,17 @@ Server  : ${DEPLOY_SERVER}
             }
         }
 
-        
-stage('💚 Health Check') {
-    steps {
+      stage('💚 Health Check') {
+        steps {
         sh '''
-        #!/bin/bash
-        set -e
+        echo "=== Health Check ==="
 
-        echo "=== Django App Health Check ==="
+        STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
 
-        # Health endpoint URL
-        HEALTH_URL="http://127.0.0.1:8000/health/"
-
-        # Retry configuration
-        RETRIES=10
-        SLEEP_TIME=5
-        SUCCESS=0
-
-        for i in $(seq 1 $RETRIES); do
-            STATUS=$(curl -s --max-time 5 $HEALTH_URL | tr -d '\\r\\n')
-            if [ "$STATUS" = "UP" ]; then
-                echo -e "\\033[32m✅ Django app is healthy!\\033[0m"
-                SUCCESS=1
-                break
-            else
-                echo -e "\\033[33mWaiting for Django app to be healthy... Attempt $i/$RETRIES\\033[0m"
-                sleep $SLEEP_TIME
-            fi
-        done
-
-        if [ $SUCCESS -ne 1 ]; then
-            echo -e "\\033[31m❌ Django app failed health check after $RETRIES attempts!\\033[0m"
+        if [ "$STATUS" = "UP" ]; then
+            echo "✅ Django app is healthy"
+        else
+            echo "❌ Health check failed"
             exit 1
         fi
         '''
