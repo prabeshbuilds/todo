@@ -160,7 +160,7 @@ Server  : ${DEPLOY_SERVER}
                 sh '''
                                 echo "=== Health Check ==="
 
-                                STATUS=$(curl -s --max-time 5 http://0.0.0.0:8001/ | tr -d '\\r\\n')
+                                STATUS=$(curl -s --max-time 5 http://127.0.0.1:8001/health/ | tr -d '\r\n')
 
                                 if [ "$STATUS" = "UP" ]; then
                                     echo "✅ Django app is healthy"
