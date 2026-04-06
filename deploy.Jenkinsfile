@@ -155,55 +155,19 @@ Server  : ${DEPLOY_SERVER}
             }
         }
 
-                stage('💚 Health Check') {
-                    steps {
+        stage('💚 Health Check') {
+            steps {
                         sh '''
                 echo "=== Health Check ==="
-                set -e
 
-                HEALTH_URL="http://127.0.0.1:8000/health"
-                MAX_RETRIES=10
-                RETRY_DELAY=5
+                STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
 
-                for i in $(seq 1 $MAX_RETRIES); do
-                    echo "Attempt $i/$MAX_RETRIES: Checking health at $HEALTH_URL"
-
-                    if RESPONSE=$(curl -s --max-time 10 "$HEALTH_URL"); then
-                        if echo "$RESPONSE" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    if data.get('status') == 'UP':
-        print('HEALTHY')
-        sys.exit(0)
-    else:
-        print('STATUS_NOT_UP')
-        sys.exit(1)
-except:
-    print('INVALID_JSON')
-    sys.exit(1)
-" 2>/dev/null; then
-                            echo "✅ Django app is healthy"
-                            break
-                        else
-                            echo "❌ Health check failed: Invalid response or status not UP"
-                            if [ $i -eq $MAX_RETRIES ]; then
-                                echo "❌ All health check attempts failed"
-                                exit 1
-                            fi
-                            echo "⏳ Waiting ${RETRY_DELAY}s before retry..."
-                            sleep $RETRY_DELAY
-                        fi
-                    else
-                        echo "❌ Curl failed for health check"
-                        if [ $i -eq $MAX_RETRIES ]; then
-                            echo "❌ All health check attempts failed"
-                            exit 1
-                        fi
-                        echo "⏳ Waiting ${RETRY_DELAY}s before retry..."
-                        sleep $RETRY_DELAY
-                    fi
-                done
+                if [ "$STATUS" = "UP" ]; then
+                    echo "✅ Django app is healthy"
+                else
+                    echo "❌ Health check failed"
+                    exit 1
+                fi
                 '''
                     }
                 }
