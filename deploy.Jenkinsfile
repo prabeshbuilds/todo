@@ -186,4 +186,3 @@ Server  : ${DEPLOY_SERVER}
         }
 
     } // end of stages
-} // end of pipeline
