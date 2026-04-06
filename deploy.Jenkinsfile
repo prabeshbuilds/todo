@@ -174,7 +174,7 @@ Server  : ${DEPLOY_SERVER}
         }
     }
 }
-        stage('💚 Health Check') {
+    stage('💚 Health Check') {
     steps {
         sh '''
         set -e
@@ -194,12 +194,11 @@ Server  : ${DEPLOY_SERVER}
 
         if [ $success -ne 1 ]; then
             echo -e "\\033[31m❌ Health check failed\\033[0m"
-            exit 1 ok
+            exit 1
         fi
         '''
     }
 }
-    }
 
     post {
         always {
