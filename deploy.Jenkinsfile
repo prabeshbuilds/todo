@@ -155,34 +155,35 @@ Server  : ${DEPLOY_SERVER}
             }
         }
 
-        stage('💚 Health Check') {
+               stage('💚 Health Check') {
             steps {
-                        sh '''
-                echo "=== Health Check ==="
+                sh '''
+                                echo "=== Health Check ==="
 
-                STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
+                                STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
 
-                if [ "$STATUS" = "UP" ]; then
-                    echo "✅ Django app is healthy"
-                else
-                    echo "❌ Health check failed"
-                    exit 1
-                fi
-                '''
-                    }
-                }
+                                if [ "$STATUS" = "UP" ]; then
+                                    echo "✅ Django app is healthy"
+                                else
+                                    echo "❌ Health check failed"
+                                    exit 1
+                                fi
+                                '''
+            }
+        } // end of Health Check stage
+
+    } // end of stages
 
     post {
-                    always {
-                        sh 'docker image prune -f'
-                    }
-                    success {
-                        echo "✅ Deployment succeeded!"
-                    }
-                    failure {
-                        echo "❌ Deployment failed!"
-                    }
-                }
-
+        always {
+            sh 'docker image prune -f'
+        }
+        success {
+            echo "✅ Deployment succeeded!"
+        }
+        failure {
+            echo "❌ Deployment failed!"
+        }
     }
-}
+
+} // end of pipeline
