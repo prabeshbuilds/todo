@@ -27,5 +27,5 @@ def delete(request, pk):
 
 from django.http import JsonResponse
 
-def health_check(request):
+def health(request):
     return JsonResponse({"status": "UP"})
