@@ -155,31 +155,23 @@ Server  : ${DEPLOY_SERVER}
             }
         }
 
-        stage('💚 Health Check') {
-            steps {
-                sh '''
-                set -e
-                echo "=== Health Check ==="
-                success=0
+       stage('💚 Health Check') {
+    steps {
+        sh '''
+        echo "=== Health Check ==="
 
-                for i in $(seq 1 10); do
-                    STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
-                    if [ "$STATUS" = "UP" ]; then
-                        echo -e "\\033[32m✅ App is healthy\\033[0m"
-                        success=1
-                        break
-                    else
-                        echo "Waiting..."
-                        sleep 5
-                    fi
-                done
+        # Simple one-time check
+        STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
 
-                if [ $success -ne 1 ]; then
-                    echo -e "\\033[31m❌ Health check failed\\033[0m"
-                    exit 1
-                fi
-                '''
-            }
+        if [ "$STATUS" = "UP" ]; then
+            echo -e "\\033[32m✅ App is healthy\\033[0m"
+        else
+            echo -e "\\033[31m❌ Health check failed\\033[0m"
+            exit 1
+        fi
+        '''
+    }
+}
 
             post {
                 always {
