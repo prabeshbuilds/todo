@@ -157,18 +157,26 @@ Server  : ${DEPLOY_SERVER}
 
                stage('💚 Health Check') {
             steps {
-                sh '''
-                                echo "=== Health Check ==="
+                                    sh '''
+                        echo "=== Health Check ==="
 
-                                STATUS=$(curl -s --max-time 5 http://127.0.0.1:8001/health/ | tr -d '\r\n')
+                        success=0
+                        for i in $(seq 1 10); do
+                            if curl -s --max-time 5 http://127.0.0.1:8000/health/ | grep -q '"UP"'; then
+                                echo "✅ Django app is healthy"
+                                success=1
+                                break
+                            else
+                                echo "Waiting for Django..."
+                                sleep 5
+                            fi
+                        done
 
-                                if [ "$STATUS" = "UP" ]; then
-                                    echo "✅ Django app is healthy"
-                                else
-                                    echo "❌ Health check failed"
-                                    exit 1
-                                fi
-                                '''
+                        if [ $success -ne 1 ]; then
+                            echo "❌ Health check failed"
+                            exit 1
+                        fi
+                        '''
             }
         } // end of Health Check stage
 
