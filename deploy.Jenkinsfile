@@ -41,31 +41,31 @@ Server  : ${DEPLOY_SERVER}
         stage('🐍 Setup Python Virtualenv') {
             steps {
                 sh '''
-set -e
+                set -e
 
-[ -d venv ] && rm -rf venv
-python3 -m venv venv
-. venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel --break-system-packages
+                [ -d venv ] && rm -rf venv
+                python3 -m venv venv
+                . venv/bin/activate
+                python -m pip install --upgrade pip setuptools wheel --break-system-packages
 
-if [ -f requirements.txt ]; then
-    pip install -r requirements.txt --break-system-packages
-fi
+                if [ -f requirements.txt ]; then
+                    pip install -r requirements.txt --break-system-packages
+                fi
 
-python --version
-pip --version
-'''
+                python --version
+                pip --version
+                '''
             }
         }
 
         stage('🧪 Django Lint & Test') {
             steps {
                 sh '''
-. venv/bin/activate
-python manage.py check
-python manage.py migrate
-python manage.py test
-'''
+                . venv/bin/activate
+                python manage.py check
+                python manage.py migrate
+                python manage.py test
+                '''
             }
         }
 
@@ -77,11 +77,11 @@ python manage.py test
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-set -e
-echo "Building Docker image..."
-docker build --pull -t $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG .
-docker tag $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG $DOCKER_USERNAME/$APP_NAME:latest
-'''
+                    set -e
+                    echo "Building Docker image..."
+                    docker build --pull -t $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG .
+                    docker tag $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG $DOCKER_USERNAME/$APP_NAME:latest
+                    '''
                 }
             }
         }
@@ -94,14 +94,14 @@ docker tag $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG $DOCKER_USERNAME/$APP_NAME:late
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-set -e
-echo "Logging in to DockerHub..."
-echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                    set -e
+                    echo "Logging in to DockerHub..."
+                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-echo "Pushing Docker images..."
-docker push $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-docker push $DOCKER_USERNAME/$APP_NAME:latest
-'''
+                    echo "Pushing Docker images..."
+                    docker push $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                    docker push $DOCKER_USERNAME/$APP_NAME:latest
+                    '''
                 }
             }
         }
@@ -115,74 +115,110 @@ docker push $DOCKER_USERNAME/$APP_NAME:latest
                 )]) {
                     sshagent(['deployment-server-ssh']) {
                         sh '''
-set -e
-echo "Starting deployment..."
+                        set -e
+                        echo "Starting deployment..."
 
-ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
-    set -e
-    echo '✅ Connected to server'
+                        ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER "
+                            set -e
+                            echo '✅ Connected to server'
 
-    docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
+                            docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
 
-    echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
+                            echo '$DOCKER_PASSWORD' | docker login -u '$DOCKER_USERNAME' --password-stdin
 
-    docker ps -q --filter 'name=$APP_NAME' | xargs -r docker stop
-    docker ps -a -q --filter 'name=$APP_NAME' | xargs -r docker rm
+                            docker ps -q --filter 'name=$APP_NAME' | xargs -r docker stop
+                            docker ps -a -q --filter 'name=$APP_NAME' | xargs -r docker rm
 
-    docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                            docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
 
-    docker run -d \
-        --name $APP_NAME \
-        --restart unless-stopped \
-        --network private-net \
-        --env-file $ENV_FILE \
-        -p $APP_PORT:8000 \
-        $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                            docker run -d \
+                                --name $APP_NAME \
+                                --restart unless-stopped \
+                                --network private-net \
+                                --env-file $ENV_FILE \
+                                -p $APP_PORT:8000 \
+                                $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
 
-    sleep 5
-    docker logs --tail 20 $APP_NAME
+                            sleep 5
+                            docker logs --tail 20 $APP_NAME
 
-    docker images --format '{{.Repository}} {{.ID}} {{.CreatedAt}}' \
-        | grep $DOCKER_USERNAME/$APP_NAME \
-        | sort -rk3 \
-        | tail -n +6 \
-        | awk '{print \$2}' \
-        | xargs -r docker rmi || true
-"
-'''
+                            docker images --format '{{.Repository}} {{.ID}} {{.CreatedAt}}' \
+                                | grep $DOCKER_USERNAME/$APP_NAME \
+                                | sort -rk3 \
+                                | tail -n +6 \
+                                | awk '{print \$2}' \
+                                | xargs -r docker rmi || true
+                        "
+                        '''
                     }
                 }
             }
         }
 
-        stage('💚 Health Check') {
-            steps {
-                sh '''
-echo "=== Health Check ==="
+                stage('💚 Health Check') {
+                    steps {
+                        sh '''
+                echo "=== Health Check ==="
+                set -e
 
-STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
+                HEALTH_URL="http://127.0.0.1:8000/health"
+                MAX_RETRIES=10
+                RETRY_DELAY=5
 
-if [ "$STATUS" = "UP" ]; then
-    echo "✅ Django app is healthy"
-else
-    echo "❌ Health check failed"
-    exit 1
-fi
-'''
-            }
-        }
+                for i in $(seq 1 $MAX_RETRIES); do
+                    echo "Attempt $i/$MAX_RETRIES: Checking health at $HEALTH_URL"
 
-    }
+                    if RESPONSE=$(curl -s --max-time 10 "$HEALTH_URL"); then
+                        if echo "$RESPONSE" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    if data.get('status') == 'UP':
+        print('HEALTHY')
+        sys.exit(0)
+    else:
+        print('STATUS_NOT_UP')
+        sys.exit(1)
+except:
+    print('INVALID_JSON')
+    sys.exit(1)
+" 2>/dev/null; then
+                            echo "✅ Django app is healthy"
+                            break
+                        else
+                            echo "❌ Health check failed: Invalid response or status not UP"
+                            if [ $i -eq $MAX_RETRIES ]; then
+                                echo "❌ All health check attempts failed"
+                                exit 1
+                            fi
+                            echo "⏳ Waiting ${RETRY_DELAY}s before retry..."
+                            sleep $RETRY_DELAY
+                        fi
+                    else
+                        echo "❌ Curl failed for health check"
+                        if [ $i -eq $MAX_RETRIES ]; then
+                            echo "❌ All health check attempts failed"
+                            exit 1
+                        fi
+                        echo "⏳ Waiting ${RETRY_DELAY}s before retry..."
+                        sleep $RETRY_DELAY
+                    fi
+                done
+                '''
+                    }
+                }
 
-    post {
-        always {
-            sh 'docker image prune -f'
-        }
-        success {
-            echo "✅ Deployment succeeded!"
-        }
-        failure {
-            echo "❌ Deployment failed!"
-        }
+            post {
+                    always {
+                        sh 'docker image prune -f'
+                    }
+                    success {
+                        echo "✅ Deployment succeeded!"
+                    }
+                    failure {
+                        echo "❌ Deployment failed!"
+                    }
+                }
+
     }
 }
