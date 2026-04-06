@@ -175,7 +175,7 @@ Server  : ${DEPLOY_SERVER}
     }
 }
       stage('💚 Health Check') {
-    steps {
+       steps {
         sh '''
         echo "=== Health Check ==="
         success=0
@@ -194,7 +194,7 @@ Server  : ${DEPLOY_SERVER}
         if [ $success -ne 1 ]; then
             echo "❌ Health check failed"
             exit 1
-        fi
+        fi  
         '''
     }
 }
