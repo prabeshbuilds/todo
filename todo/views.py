@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from .models import Todo
 
 def index(request):
@@ -24,8 +25,6 @@ def delete(request, pk):
     todo = Todo.objects.get(id=pk)
     todo.delete()
     return redirect('index')
-
-from django.http import JsonResponse
 
 def health(request):
     return JsonResponse({"status": "UP"})
