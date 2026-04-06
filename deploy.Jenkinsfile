@@ -194,7 +194,7 @@ Server  : ${DEPLOY_SERVER}
 
         if [ $success -ne 1 ]; then
             echo -e "\\033[31m❌ Health check failed\\033[0m"
-            exit 1
+            exit 1 ok
         fi
         '''
     }
