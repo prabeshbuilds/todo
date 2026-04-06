@@ -172,7 +172,7 @@ Server  : ${DEPLOY_SERVER}
                     }
                 }
 
-                post {
+            post {
                     always {
                         sh 'docker image prune -f'
                     }
