@@ -78,14 +78,15 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mydatabase',
-        'USER': 'myuser',
-        'PASSWORD': 'mypassword',
-        'HOST': 'localhost',   # or 'db' if using Docker
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'mydatabase'),
+        'USER': os.environ.get('DB_USER', 'myuser'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'mypassword'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
+DEBUG = int(os.environ.get('DEBUG', default=0))
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
