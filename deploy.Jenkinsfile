@@ -174,15 +174,16 @@ Server  : ${DEPLOY_SERVER}
         }
     }
 }
-      stage('💚 Health Check') {
-       steps {
+stage('💚 Health Check') {
+    steps {
         sh '''
+        set -e
         echo "=== Health Check ==="
         success=0
         for i in $(seq 1 10); do
-            STATUS=$(curl -s http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
+            STATUS=$(curl -s --max-time 5 http://127.0.0.1:8000/health/ | tr -d '\\r\\n')
             if [ "$STATUS" = "UP" ]; then
-                echo "✅ App is healthy"
+                echo -e "\\033[32m✅ App is healthy\\033[0m"
                 success=1
                 break
             else
@@ -192,13 +193,12 @@ Server  : ${DEPLOY_SERVER}
         done
 
         if [ $success -ne 1 ]; then
-            echo "❌ Health check failed"
+            echo -e "\\033[31m❌ Health check failed\\033[0m"
             exit 1
-        fi  
+        fi
         '''
     }
 }
-
     post {
         always {
             sh 'docker image prune -f'
