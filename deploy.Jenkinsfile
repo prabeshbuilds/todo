@@ -42,17 +42,13 @@ Server  : ${DEPLOY_SERVER}
             steps {
                 sh '''
                 set -e
-
                 rm -rf venv || true
                 python3 -m venv venv
                 . venv/bin/activate
-
                 python -m pip install --upgrade pip setuptools wheel
-
                 if [ -f requirements.txt ]; then
                     pip install -r requirements.txt
                 fi
-
                 python --version
                 pip --version
                 '''
@@ -64,7 +60,6 @@ Server  : ${DEPLOY_SERVER}
                 sh '''
                 set -e
                 . venv/bin/activate
-
                 python manage.py check
                 python manage.py migrate --noinput
                 python manage.py test || true
@@ -81,8 +76,8 @@ Server  : ${DEPLOY_SERVER}
                 )]) {
                     sh '''
                     set -e
-                    docker build --pull -t $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG .
-                    docker tag $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG $DOCKER_USERNAME/$APP_NAME:latest
+                    docker build --pull -t ${DOCKER_USERNAME}/${APP_NAME}:${IMAGE_TAG} .
+                    docker tag ${DOCKER_USERNAME}/${APP_NAME}:${IMAGE_TAG} ${DOCKER_USERNAME}/${APP_NAME}:latest
                     '''
                 }
             }
@@ -97,11 +92,9 @@ Server  : ${DEPLOY_SERVER}
                 )]) {
                     sh '''
                     set -e
-
-                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-                    docker push $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-                    docker push $DOCKER_USERNAME/$APP_NAME:latest
+                    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                    docker push ${DOCKER_USERNAME}/${APP_NAME}:${IMAGE_TAG}
+                    docker push ${DOCKER_USERNAME}/${APP_NAME}:latest
                     '''
                 }
             }
@@ -115,49 +108,36 @@ Server  : ${DEPLOY_SERVER}
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sshagent(['deployment-server-ssh']) {
-                        sh '''
+                        sh """
                         set -e
+                        ssh -o StrictHostKeyChecking=accept-new -p ${DEPLOY_PORT} ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            set -e
+                            echo "✅ Connected to server"
 
-                        ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER << EOF
-                        set -e
+                            docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
 
-                        echo "✅ Connected to server"
+                            echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
-                        docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
+                            docker stop ${APP_NAME} || true
+                            docker rm   ${APP_NAME} || true
 
-                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                            docker pull ${DOCKER_USERNAME}/${APP_NAME}:${IMAGE_TAG}
 
-                                                        sh """
-                                ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER << 'EOF'
-                                set -e
+                            docker run -d \\
+                                --name ${APP_NAME} \\
+                                --restart unless-stopped \\
+                                --network private-net \\
+                                --env-file ${ENV_FILE} \\
+                                -p ${APP_PORT}:8000 \\
+                                ${DOCKER_USERNAME}/${APP_NAME}:${IMAGE_TAG}
 
-                                echo "✅ Connected to server"
+                            echo "⏳ Waiting for container..."
+                            sleep 10
 
-                                docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
-
-                                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-                                docker stop $APP_NAME || true
-                                docker rm $APP_NAME || true
-
-                                docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-
-                                docker run -d \
-                                    --name $APP_NAME \
-                                    --restart unless-stopped \
-                                    --network private-net \
-                                    --env-file $ENV_FILE \
-                                    -p $APP_PORT:8000 \
-                                    $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-
-                                echo "⏳ Waiting for container..."
-                                sleep 10
-
-                                docker logs --tail 20 $APP_NAME
-
-                                docker image prune -f
-                                EOF
-                                """
+                            docker logs --tail 20 ${APP_NAME}
+                            docker image prune -f
+                        '
+                        """
                     }
                 }
             }
@@ -168,24 +148,20 @@ Server  : ${DEPLOY_SERVER}
                 sh '''
                 set -e
                 echo "=== Health Check ==="
-
                 success=0
-
                 for i in $(seq 1 5); do
-                    STATUS=$(curl -s --max-time 5 http://$DEPLOY_SERVER:$APP_PORT/health/ || true)
-
+                    STATUS=$(curl -s --max-time 5 http://${DEPLOY_SERVER}:${APP_PORT}/health/ || true)
                     if echo "$STATUS" | grep -q "UP"; then
                         echo "✅ App is healthy"
                         success=1
                         break
                     else
-                        echo "Waiting for app..."
+                        echo "Attempt $i failed, waiting..."
                         sleep 5
                     fi
                 done
-
                 if [ $success -ne 1 ]; then
-                    echo "❌ Health check failed"
+                    echo "❌ Health check failed after 5 attempts"
                     exit 1
                 fi
                 '''
@@ -199,10 +175,10 @@ Server  : ${DEPLOY_SERVER}
             sh 'docker image prune -f || true'
         }
         success {
-            echo "✅ Deployment succeeded!"
+            echo "✅ Deployment succeeded! Build #${env.BUILD_NUMBER} is live."
         }
         failure {
-            echo "❌ Deployment failed!"
+            echo "❌ Deployment failed! Check logs for build #${env.BUILD_NUMBER}."
         }
     }
 }
