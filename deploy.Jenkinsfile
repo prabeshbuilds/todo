@@ -127,27 +127,37 @@ Server  : ${DEPLOY_SERVER}
 
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-                        docker stop $APP_NAME || true
-                        docker rm $APP_NAME || true
+                                                        sh """
+                                ssh -o StrictHostKeyChecking=accept-new -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_SERVER << 'EOF'
+                                set -e
 
-                        docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                                echo "✅ Connected to server"
 
-                        docker run -d \
-                            --name $APP_NAME \
-                            --restart unless-stopped \
-                            --network private-net \
-                            --env-file $ENV_FILE \
-                            -p $APP_PORT:8000 \
-                            $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+                                docker network inspect private-net >/dev/null 2>&1 || docker network create private-net
 
-                        echo "⏳ Waiting for container..."
-                        sleep 10
+                                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-                        docker logs --tail 20 $APP_NAME
+                                docker stop $APP_NAME || true
+                                docker rm $APP_NAME || true
 
-                        docker image prune -f
-                        EOF
-                        '''
+                                docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+
+                                docker run -d \
+                                    --name $APP_NAME \
+                                    --restart unless-stopped \
+                                    --network private-net \
+                                    --env-file $ENV_FILE \
+                                    -p $APP_PORT:8000 \
+                                    $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+
+                                echo "⏳ Waiting for container..."
+                                sleep 10
+
+                                docker logs --tail 20 $APP_NAME
+
+                                docker image prune -f
+                                EOF
+                                """
                     }
                 }
             }
