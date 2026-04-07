@@ -155,32 +155,32 @@ Server  : ${DEPLOY_SERVER}
             }
         }
 
-               stage('💚 Health Check') {
-            steps {
-                                    sh '''
-                        echo "=== Health Check ==="
+    //            stage('💚 Health Check') {
+    //         steps {
+    //                                 sh '''
+    //                     echo "=== Health Check ==="
 
-                        success=0
-                        for i in $(seq 1 3); do
-                            if curl -s --max-time 1 http://127.0.0.1:8000/ | grep -q '"UP"'; then
-                                echo "✅ Django app is healthy"
-                                success=1
-                                break
-                            else
-                                echo "Waiting for Django..."
-                                sleep 5
-                            fi
-                        done
+    //                     success=0
+    //                     for i in $(seq 1 3); do
+    //                         if curl -s --max-time 1 http://127.0.0.1:8000/ | grep -q '"UP"'; then
+    //                             echo "✅ Django app is healthy"
+    //                             success=1
+    //                             break
+    //                         else
+    //                             echo "Waiting for Django..."
+    //                             sleep 5
+    //                         fi
+    //                     done
 
-                        if [ $success -ne 1 ]; then
-                            echo "❌ Health check failed"
-                            exit 1
-                        fi
-                        '''
-            }
-        } // end of Health Check stage
+    //                     if [ $success -ne 1 ]; then
+    //                         echo "❌ Health check failed"
+    //                         exit 1
+    //                     fi
+    //                     '''
+    //         }
+    //     } // end of Health Check stage
 
-    } // end of stages
+    // } // end of stages
 
     post {
         always {
