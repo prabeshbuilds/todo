@@ -150,7 +150,7 @@ Server  : ${DEPLOY_SERVER}
                 echo "=== Health Check ==="
                 success=0
                 for i in $(seq 1 5); do
-                    STATUS=$(curl -s --max-time 5 http://${DEPLOY_SERVER}:${APP_PORT}/health/ || true)
+                    STATUS=$(curl -s --max-time 5 http://localhost:8000/health/ || true)
                     if echo "$STATUS" | grep -q "UP"; then
                         echo "✅ App is healthy"
                         success=1
