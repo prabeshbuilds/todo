@@ -26,5 +26,5 @@ def delete(request, pk):
     todo.delete()
     return redirect('index')
 
-def health(request):
+def health_check(request):
     return JsonResponse({"status": "UP"})
